@@ -4,19 +4,20 @@ import re
 import sys
 
 from collections import defaultdict
+from math import log
 
 def document_stream(path):
     """
     Open a CSV file containing documents for training/classification,
-    acting as an iterator over those documents (represented by a
-    pair: (list of tokens in document, document tag)
+    acting as an iterator over the normalized representations of
+    those documents, a pair: (list of normalized tokens in document, document tag)
     """
     with open(path, 'rU') as csv_file:
         doc_reader = csv.reader(csv_file, dialect=csv.excel) 
         for row in doc_reader:
             tokens = re.split('[ \t\n\'".,;:()?!]+', row[0])
             tag = row[1]
-            yield (tokens, tag)
+            yield (map(lambda s: s.lower(), tokens), tag)
 
 class Classifier:
     """
@@ -97,7 +98,7 @@ class Classifier:
         documents.
         """
         if not self.is_trained:
-            raise Error('Classifier not trained!')
+            raise Exception('Classifier not trained!')
 
         print "Document count:  ", self.document_count
         print "Vocabulary count:", len(self.vocabulary)
@@ -124,14 +125,44 @@ class Classifier:
             for t in self.vocabulary:
                 print "  ", "P(" + str(t) + "|" + str(c) + ") =", self.conditional_probabilities[c][t]
 
-    def classify(self, document):
+    def classify(self, document, return_all=False):
         """
         Classify the given document (a stream of tokens)
 
-        Throws Error if classifier is not yet trained.
+        Throws Exception if classifier is not yet trained.
         """
         if not self.is_trained:
-            raise Error('Classifier not trained!')
+            raise Exception('Classifier not trained!')
+
+        normalized_document = self._normalize_document(document)
+
+        scores = {}
+        for c in self.classes:
+            scores[c] = log(self.priors[c])
+            for t in normalized_document:
+                scores[c] += log(self.conditional_probabilities[c][t])
+
+        if return_all:
+            return scores
+        else:
+            return self._key_max(scores)
+
+    def _normalize_document(self, document):
+        """
+        The non-binary case doesn't manipulate the document in any way.
+        """
+        return document
+
+    def _key_max(self, dictionary):
+        best_score = None
+        best_key = None
+        for key in dictionary:
+            score = dictionary[key]
+            if best_score is None or score > best_score:
+                best_score = score
+                best_key = key
+        return best_key
+
 
 class BinaryClassifier(Classifier):
     """
@@ -162,17 +193,26 @@ class BinaryClassifier(Classifier):
             # Count this token
             self.class_global_counts[tag] += 1
 
+    def _normalize_document(self, document):
+        """
+        In the binary case, collapse duplicates
+        """
+        return list(set(document))
+
 class Tester:
     """
     Harness for testing a (trained) classifier.
     """
     def __init__(self, classifier, documents=None):
+        if not classifier.is_trained:
+            raise Exception("Classifier not trained.")
         self.classifier = classifier
         if documents is not None:
             self.test(documents)
 
     def test(self, documents):
-        pass
+        for (doc, actual_class) in documents:
+            predicted_class = self.classifier.classify(doc)
 
 
 
