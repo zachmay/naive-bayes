@@ -14,6 +14,8 @@ classifiers.py   Contains class definitions for standard and binary classifiers
 nb.py            The main program file.
 
 test.py          Unit tests. (These can be ignored.)
+
+corpora/         Folder containing testing, training, and stop-word data sets.
              
 Usage:
 ------
