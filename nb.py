@@ -46,12 +46,12 @@ def main():
     print 'Binary version:      ' + ('Yes' if binary_version else 'No')
 
     if exclude_stop_words:
-        stop_words = load_stop_words('english.stop') 
+        stop_words = load_stop_words('corpora/english.stop') 
     else:
         stop_words = []
 
-    training_documents = document_stream('training' + str(training_set) + '.csv')
-    testing_documents  = document_stream('testing1.csv')
+    training_documents = document_stream('corpora/training' + str(training_set) + '.csv')
+    testing_documents  = document_stream('corpora/testing1.csv')
 
     if binary_version:
         classifier = BinaryClassifier(training_documents, stop_words)
